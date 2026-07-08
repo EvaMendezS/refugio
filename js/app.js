@@ -4,8 +4,10 @@
  * Punto de entrada y controlador principal. Maneja:
  *  - Arranque de la app (onboarding vs. app normal).
  *  - Routing simple basado en hash (#dashboard, #registro, etc.).
- *  - Delegación de eventos (data-action) para no atar listeners
- *    sueltos por toda la vista.
+ *  - Navegación interna entre la grilla de pestañas del registro
+ *    diario y el panel de detalle de cada categoría.
+ *  - El temporizador del ejercicio de respiración guiada.
+ *  - Delegación de eventos (data-action).
  *  - Registro del Service Worker (PWA).
  * ------------------------------------------------------------------
  */
@@ -14,10 +16,9 @@
 
 const App = (() => {
 
-  // Estado efímero de navegación (no se persiste, vive solo en memoria).
   const state = {
     fechaRegistro: UI.todayISO(),
-    categoriaActiva: null,
+    categoriaActiva: null,   // catId de la pestaña abierta dentro de "registro", o null = grilla
     calAnio: new Date().getFullYear(),
     calMes: new Date().getMonth(),
     statCategoria: 'estado_animo',
@@ -27,56 +28,64 @@ const App = (() => {
   const ROUTES = ['dashboard', 'registro', 'timeline', 'calendario', 'estadisticas', 'perfil'];
 
   // ------------------------------------------------------------
-  // EJERCICIO DE RESPIRACIÓN GUIADA (temporizador por segundos)
+  // RESPIRACIÓN GUIADA — temporizador por segundos
   // ------------------------------------------------------------
-  const FASES_RESPIRACION = [
-    { nombre: 'Inhalá', segundos: 4, clase: 'fase-inhalar' },
-    { nombre: 'Sostené', segundos: 4, clase: 'fase-sostener' },
-    { nombre: 'Exhalá', segundos: 4, clase: 'fase-exhalar' },
-    { nombre: 'Sostené', segundos: 4, clase: 'fase-sostener' }
-  ];
-  let respiracionIntervalId = null;
-  let respiracionFaseIdx = 0;
-  let respiracionSegundos = 0;
+  const BreathingTimer = (() => {
+    const FASES = [
+      { clase: 'fase-inhalar', texto: 'Inhalá...', seg: 4 },
+      { clase: 'fase-sostener', texto: 'Sostené', seg: 4 },
+      { clase: 'fase-exhalar', texto: 'Exhalá...', seg: 4 },
+      { clase: 'fase-sostener', texto: 'Sostené', seg: 2 }
+    ];
+    let faseIdx = 0;
+    let restante = 0;
+    let intervalId = null;
 
-  function iniciarRespiracion() {
-    detenerRespiracion();
-    respiracionFaseIdx = 0;
-    _aplicarFaseRespiracion();
-    respiracionIntervalId = setInterval(_tickRespiracion, 1000);
-  }
+    function _tick() {
+      const circulo = document.getElementById('resp-circulo');
+      const texto = document.getElementById('resp-texto');
+      const contador = document.getElementById('resp-contador');
+      if (!circulo || !texto || !contador) { stop(); return; }
 
-  function _aplicarFaseRespiracion() {
-    const fase = FASES_RESPIRACION[respiracionFaseIdx];
-    respiracionSegundos = fase.segundos;
-    const circulo = document.getElementById('respiracion-circulo');
-    if (!circulo) { detenerRespiracion(); return; } // el widget ya no está en pantalla
-    circulo.className = `respiracion-circulo ${fase.clase}`;
-    document.getElementById('respiracion-texto').textContent = `${fase.nombre}…`;
-    document.getElementById('respiracion-contador').textContent = `${respiracionSegundos}s`;
-  }
-
-  function _tickRespiracion() {
-    const contador = document.getElementById('respiracion-contador');
-    if (!contador) { detenerRespiracion(); return; }
-    respiracionSegundos--;
-    if (respiracionSegundos <= 0) {
-      respiracionFaseIdx = (respiracionFaseIdx + 1) % FASES_RESPIRACION.length;
-      _aplicarFaseRespiracion();
-    } else {
-      contador.textContent = `${respiracionSegundos}s`;
+      if (restante <= 0) {
+        faseIdx = (faseIdx + 1) % FASES.length;
+        restante = FASES[faseIdx].seg;
+        FASES.forEach((f) => circulo.classList.remove(f.clase));
+        circulo.classList.add(FASES[faseIdx].clase);
+        texto.textContent = FASES[faseIdx].texto;
+      }
+      contador.textContent = `${restante} s`;
+      restante--;
     }
-  }
 
-  function detenerRespiracion() {
-    if (respiracionIntervalId) { clearInterval(respiracionIntervalId); respiracionIntervalId = null; }
-    const circulo = document.getElementById('respiracion-circulo');
-    const texto = document.getElementById('respiracion-texto');
-    const contador = document.getElementById('respiracion-contador');
-    if (circulo) circulo.className = 'respiracion-circulo';
-    if (texto) texto.textContent = 'Presioná comenzar cuando quieras';
-    if (contador) contador.textContent = '';
-  }
+    function start() {
+      stop();
+      faseIdx = -1;
+      restante = 0;
+      const iniciar = document.getElementById('btn-resp-iniciar');
+      const detener = document.getElementById('btn-resp-detener');
+      if (iniciar) iniciar.hidden = true;
+      if (detener) detener.hidden = false;
+      _tick();
+      intervalId = setInterval(_tick, 1000);
+    }
+
+    function stop() {
+      if (intervalId) { clearInterval(intervalId); intervalId = null; }
+      const circulo = document.getElementById('resp-circulo');
+      const texto = document.getElementById('resp-texto');
+      const contador = document.getElementById('resp-contador');
+      const iniciar = document.getElementById('btn-resp-iniciar');
+      const detener = document.getElementById('btn-resp-detener');
+      if (circulo) FASES.forEach((f) => circulo.classList.remove(f.clase));
+      if (texto) texto.textContent = 'Presioná iniciar cuando quieras';
+      if (contador) contador.textContent = '';
+      if (iniciar) iniciar.hidden = false;
+      if (detener) detener.hidden = true;
+    }
+
+    return { start, stop };
+  })();
 
   // ------------------------------------------------------------
   // ARRANQUE
@@ -105,7 +114,6 @@ const App = (() => {
 
   function registrarServiceWorker() {
     if ('serviceWorker' in navigator) {
-      // Ruta relativa: funciona tanto en local como bajo un subpath de GitHub Pages.
       navigator.serviceWorker.register('service-worker.js').catch((err) => {
         console.warn('[App] No se pudo registrar el Service Worker:', err);
       });
@@ -117,10 +125,10 @@ const App = (() => {
   // ------------------------------------------------------------
 
   function onHashChange() {
-    detenerRespiracion();
+    BreathingTimer.stop();
+    state.categoriaActiva = null; // toda navegación por hash vuelve a la grilla
     const ruta = (location.hash || '#dashboard').replace('#', '');
     const rutaValida = ROUTES.includes(ruta) ? ruta : 'dashboard';
-    if (rutaValida !== 'registro') state.categoriaActiva = null;
     marcarNavActiva(rutaValida);
     render(rutaValida);
   }
@@ -189,43 +197,36 @@ const App = (() => {
         const f = new Date(state.fechaRegistro);
         f.setDate(f.getDate() + dir);
         const nuevaFecha = f.toISOString().slice(0, 10);
-        if (nuevaFecha > UI.todayISO()) return; // no se permite registrar a futuro
+        if (nuevaFecha > UI.todayISO()) return;
         state.fechaRegistro = nuevaFecha;
         UI.renderRegistro(state.fechaRegistro);
         break;
       }
 
+      case 'abrir-categoria':
+        BreathingTimer.stop();
+        state.categoriaActiva = el.dataset.cat;
+        render('registro');
+        break;
+
+      case 'cerrar-categoria':
+        BreathingTimer.stop();
+        state.categoriaActiva = null;
+        render('registro');
+        break;
+
+      case 'resp-iniciar':
+        BreathingTimer.start();
+        break;
+
+      case 'resp-detener':
+        BreathingTimer.stop();
+        break;
+
       case 'ver-dia':
         state.fechaRegistro = el.dataset.fecha;
         state.categoriaActiva = null;
         irA('registro');
-        break;
-
-      case 'abrir-categoria':
-        state.categoriaActiva = el.dataset.categoria;
-        UI.renderCategoriaDetalle(state.fechaRegistro, state.categoriaActiva);
-        break;
-
-      case 'volver-registro':
-        detenerRespiracion();
-        state.categoriaActiva = null;
-        UI.renderRegistro(state.fechaRegistro);
-        break;
-
-      case 'respirar-iniciar':
-        iniciarRespiracion();
-        break;
-
-      case 'respirar-detener':
-        detenerRespiracion();
-        break;
-
-      case 'borrar-registro':
-        if (confirm(REFUGIO_CONTENT.FEEDBACK.confirmar_borrado)) {
-          Storage.deleteEntry(el.dataset.fecha);
-          UI.toast('Registro eliminado');
-          irA('timeline');
-        }
         break;
 
       case 'cal-mes': {
@@ -286,21 +287,13 @@ const App = (() => {
     if (form.id === 'form-detalle-categoria') {
       e.preventDefault();
       const fecha = form.dataset.fecha;
-      const categoria = form.dataset.categoria;
-      const data = UI.leerFormDetalle(form, categoria);
+      const catId = form.dataset.cat;
+      const data = UI.leerFormDetalle(form, catId);
       Storage.saveEntry(fecha, data);
-      detenerRespiracion();
       UI.toast(REFUGIO_CONTENT.FEEDBACK.guardado);
+      BreathingTimer.stop();
       state.categoriaActiva = null;
-      UI.renderRegistro(fecha);
-    }
-
-    if (form.id === 'form-checklist') {
-      e.preventDefault();
-      const fecha = form.dataset.fecha;
-      const data = UI.leerFormChecklist(form);
-      Storage.saveEntry(fecha, data);
-      UI.toast(REFUGIO_CONTENT.FEEDBACK.guardado);
+      render('registro');
     }
   }
 
@@ -319,6 +312,14 @@ const App = (() => {
 
     if (el.id === 'input-import') {
       importarBackupDesdeArchivo(el.files[0]);
+    }
+
+    // Checklist de autocuidado: autoguardado inmediato al tildar/destildar.
+    if (el.name === 'checklist' && el.closest('#checklist-grid')) {
+      const grid = document.getElementById('checklist-grid');
+      const seleccionados = Array.from(grid.querySelectorAll('input[name="checklist"]:checked')).map((i) => i.value);
+      Storage.saveEntry(state.fechaRegistro, { checklist: seleccionados });
+      UI.toast(REFUGIO_CONTENT.FEEDBACK.actualizado);
     }
   }
 

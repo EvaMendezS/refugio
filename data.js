@@ -43,18 +43,17 @@ const REFUGIO_DATA = {
   },
 
   /** Paleta de la app (se refleja también en styles.css como variables).
-   *  Versión "chic": tonos profundos y editoriales en vez de pastel puro. */
+   *  Estilo vívido: magenta/rosa fuerte + verde vivo, dinámico, no pastel. */
   PALETTE: {
-    vino: '#8C4A5B',
-    vinoFuerte: '#6E3644',
-    salvia: '#4F5F4E',
-    salviaFuerte: '#3A4739',
-    crema: '#FAF7F2',
-    gris: '#F1EEE8',
-    grisBorde: '#E2DDD3',
-    grisTexto: '#7A756C',
-    texto: '#2A2724',
-    oro: '#B08D57'
+    rosa: '#E4308F',
+    rosaFuerte: '#B81C74',
+    verde: '#7ED957',
+    verdeFuerte: '#4F9E2E',
+    crema: '#FFFFFF',
+    gris: '#F4F2F0',
+    grisBorde: '#E4E0DA',
+    grisTexto: '#726C66',
+    texto: '#221F1D'
   },
 
   /** Grupos en los que se organiza el registro diario. */
@@ -152,12 +151,25 @@ const REFUGIO_DATA = {
     },
     migrana: {
       campos: [
+        { id: 'migrana_hora_inicio', label: 'Hora en que empezó', icon: '🕐', type: 'text' },
         { id: 'migrana_ubicacion', label: 'Ubicación del dolor', icon: '📍', type: 'select',
           options: ['Un lado', 'Ambos lados', 'Nuca', 'Frente', 'Detrás de los ojos'] },
         { id: 'migrana_aura', label: '¿Hubo aura previa?', icon: '✨', type: 'bool' },
-        { id: 'migrana_duracion', label: 'Duración', icon: '⏱️', type: 'number', unit: 'horas' },
-        { id: 'migrana_desencadenante', label: 'Posible desencadenante', icon: '🎯', type: 'text' },
-        { id: 'migrana_medicacion', label: '¿Tomaste medicación?', icon: '💊', type: 'bool' }
+        { id: 'migrana_aura_sintomas', label: 'Síntomas del aura', icon: '👁️', type: 'multi',
+          options: ['Destellos de luz', 'Puntos ciegos', 'Hormigueo', 'Dificultad para hablar', 'Visión borrosa'] },
+        { id: 'migrana_nausea', label: '¿Náuseas o vómitos?', icon: '🤢', type: 'bool' },
+        { id: 'migrana_fotofobia', label: '¿Sensibilidad a la luz?', icon: '💡', type: 'bool' },
+        { id: 'migrana_fonofobia', label: '¿Sensibilidad al sonido?', icon: '🔊', type: 'bool' },
+        { id: 'migrana_duracion', label: 'Duración total', icon: '⏱️', type: 'number', unit: 'horas' },
+        { id: 'migrana_desencadenantes', label: 'Posibles desencadenantes', icon: '🎯', type: 'multi',
+          options: ['Estrés', 'Falta de sueño', 'Ayuno', 'Alcohol', 'Cambios hormonales', 'Clima', 'Pantallas', 'Ruido o luz fuerte', 'Alimentos específicos'] },
+        { id: 'migrana_relacion_ciclo', label: '¿Coincide con tu ciclo menstrual?', icon: '🌸', type: 'bool' },
+        { id: 'migrana_medicacion', label: '¿Tomaste medicación?', icon: '💊', type: 'bool' },
+        { id: 'migrana_medicacion_nombre', label: '¿Cuál?', icon: '💊', type: 'text' },
+        { id: 'migrana_medicacion_efectividad', label: '¿Qué tan efectiva fue?', icon: '📈', type: 'scale',
+          scaleLabels: ['Nada', 'Poco', 'Algo', 'Bastante', 'Totalmente'] },
+        { id: 'migrana_impacto', label: 'Impacto en tu día', icon: '📉', type: 'select',
+          options: ['Pude seguir con normalidad', 'Tuve que bajar el ritmo', 'Tuve que parar actividades', 'Quedé en cama'] }
       ]
     },
     dolor: {
@@ -177,6 +189,8 @@ const REFUGIO_DATA = {
     },
     ciclo: {
       campos: [
+        { id: 'ciclo_fecha_inicio', label: 'Fecha de inicio del período (si empezó hoy)', icon: '🗓️', type: 'date' },
+        { id: 'ciclo_duracion_dias', label: 'Duración habitual del período', icon: '📆', type: 'number', unit: 'días' },
         { id: 'ciclo_flujo', label: 'Flujo', icon: '🌸', type: 'select', options: ['Leve', 'Moderado', 'Abundante'] },
         { id: 'ciclo_sintomas', label: 'Síntomas', icon: '⚡', type: 'multi',
           options: ['Cólicos', 'Dolor de espalda', 'Hinchazón', 'Dolor de cabeza', 'Cambios de ánimo', 'Sensibilidad'] }

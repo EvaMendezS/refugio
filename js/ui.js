@@ -5,6 +5,14 @@
  * sobre el contenedor #app-view y usa Storage/Analytics como única
  * fuente de datos. No hay routing complejo: app.js decide qué vista
  * pintar y llama a la función correspondiente de este módulo.
+ *
+ * MODELO DE REGISTRO DIARIO (actualizado a pestañas):
+ * En vez de un formulario largo con todas las categorías juntas, el
+ * registro diario ahora es una grilla de "pestañas" (una por
+ * categoría). Al tocar una, se abre un panel de detalle con el campo
+ * principal de esa categoría + todos los campos ampliados que definí
+ * en REFUGIO_DATA.DETAILS (ver data.js). Ansiedad y pánico además
+ * muestran un ejercicio de respiración guiada animado.
  * ------------------------------------------------------------------
  */
 
@@ -14,7 +22,6 @@ const UI = (() => {
 
   const view = () => document.getElementById('app-view');
 
-  /** Escapa HTML básico para evitar inyección al mostrar texto libre del usuario. */
   function esc(str) {
     if (str === undefined || str === null) return '';
     return String(str)
@@ -26,7 +33,7 @@ const UI = (() => {
 
   function todayISO() {
     const d = new Date();
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); // corrige a hora local
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().slice(0, 10);
   }
 
@@ -42,7 +49,6 @@ const UI = (() => {
     return fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
   }
 
-  /** Muestra una notificación breve tipo "toast" en la esquina de la pantalla. */
   function toast(mensaje) {
     let cont = document.getElementById('toast-container');
     if (!cont) {
@@ -209,12 +215,10 @@ const UI = (() => {
 
     view().innerHTML = `
       <section class="dashboard">
-        <header class="dash-header">
-          <div>
-            <p class="dash-greeting">${greeting()}, ${esc(profile.nombre)} ${esc(profile.avatar)}</p>
-            <p class="dash-frase">${frase}</p>
-          </div>
-        </header>
+        <div class="dash-hero">
+          <p class="dash-greeting">${greeting()}, ${esc(profile.nombre)} ${esc(profile.avatar)}</p>
+          <p class="dash-frase">${frase}</p>
+        </div>
 
         <div class="dash-cards">
           <div class="card card--accent-rosa">
@@ -254,7 +258,8 @@ const UI = (() => {
   }
 
   // ==========================================================
-  // REGISTRO DIARIO
+  // CAMPOS GENÉRICOS (usados tanto en categorías principales
+  // como en los campos ampliados de DETAILS)
   // ==========================================================
 
   function _campoHTML(cat, valorActual) {
@@ -276,6 +281,8 @@ const UI = (() => {
           </div>`;
       case 'number':
         return `<input type="number" min="0" step="0.5" name="${cat.id}" value="${esc(val)}" placeholder="${cat.unit || ''}">`;
+      case 'date':
+        return `<input type="date" name="${cat.id}" value="${esc(val)}">`;
       case 'text':
         return `<input type="text" name="${cat.id}" value="${esc(val)}" maxlength="200">`;
       case 'longtext':
@@ -298,6 +305,30 @@ const UI = (() => {
     }
   }
 
+  /** Une la definición principal de una categoría con sus campos ampliados (DETAILS). */
+  function camposDeCategoria(catId) {
+    const principal = REFUGIO_DATA.CATEGORIES.find((c) => c.id === catId);
+    const detalle = REFUGIO_DATA.DETAILS[catId];
+    const extra = (detalle && detalle.campos) || [];
+    return { principal, extra, breathing: !!(detalle && detalle.breathing) };
+  }
+
+  /** ¿Esta categoría tiene algún dato cargado en el entry del día? */
+  function _categoriaCompleta(entry, catId) {
+    if (!entry) return false;
+    const { principal, extra } = camposDeCategoria(catId);
+    const campos = [principal].concat(extra).filter(Boolean);
+    return campos.some((c) => {
+      const v = entry[c.id];
+      if (Array.isArray(v)) return v.length > 0;
+      return v !== undefined && v !== null && v !== '';
+    });
+  }
+
+  // ==========================================================
+  // REGISTRO DIARIO — GRILLA DE PESTAÑAS
+  // ==========================================================
+
   function renderRegistro(dateStr) {
     const entry = Storage.getEntry(dateStr) || {};
     const settings = Storage.getSettings();
@@ -306,11 +337,10 @@ const UI = (() => {
     const grupos = REFUGIO_DATA.GROUPS.map((grupo) => {
       const cats = REFUGIO_DATA.CATEGORIES.filter((c) => c.group === grupo.id);
       const tabs = cats.map((cat) => {
-        const tieneValor = entry[cat.id] !== undefined && entry[cat.id] !== null && entry[cat.id] !== '' &&
-          !(Array.isArray(entry[cat.id]) && entry[cat.id].length === 0);
+        const completo = _categoriaCompleta(entry, cat.id);
         return `
-          <button type="button" class="tab-cat ${tieneValor ? 'tab-cat--completo' : ''}" data-action="abrir-categoria" data-categoria="${cat.id}">
-            ${tieneValor ? '<span class="tab-cat-check"></span>' : ''}
+          <button type="button" class="tab-cat ${completo ? 'tab-cat--completo' : ''}" data-action="abrir-categoria" data-cat="${cat.id}">
+            ${completo ? '<span class="tab-cat-check"></span>' : ''}
             <span class="tab-cat-icon">${cat.icon}</span>
             <span class="tab-cat-label">${cat.label}</span>
           </button>`;
@@ -337,55 +367,73 @@ const UI = (() => {
           <button class="btn-icon" data-action="cambiar-fecha" data-dir="1" aria-label="Día siguiente" ${dateStr >= todayISO() ? 'disabled' : ''}>›</button>
         </div>
 
-        <p class="text-muted">Tocá una categoría para abrir su registro completo. Las que ya tienen datos hoy quedan marcadas.</p>
+        <p class="text-muted">Tocá una categoría para completar su registro. Las que ya tienen datos hoy se marcan en verde.</p>
 
         ${grupos}
 
-        <form id="form-checklist" data-fecha="${dateStr}" class="checklist-panel">
+        <div class="checklist-panel">
           <h3>✅ Checklist de autocuidado</h3>
-          <div class="checklist-grid">${checklistHTML}</div>
-          <button type="submit" class="btn btn--secondary btn--full">Guardar checklist</button>
-        </form>
-
-        ${entry.fecha ? `<button type="button" class="btn btn--danger btn--full" data-action="borrar-registro" data-fecha="${dateStr}">Borrar todo el registro de este día</button>` : ''}
+          <div class="checklist-grid" id="checklist-grid">${checklistHTML}</div>
+        </div>
       </section>`;
   }
 
-  /** Renderiza la pestaña de detalle de UNA categoría (campo principal + campos ampliados + respiración). */
-  function renderCategoriaDetalle(dateStr, catId) {
-    const cat = REFUGIO_DATA.CATEGORIES.find((c) => c.id === catId);
-    if (!cat) { renderRegistro(dateStr); return; }
-    const entry = Storage.getEntry(dateStr) || {};
-    const detalle = REFUGIO_DATA.DETAILS[catId];
-    const camposExtra = (detalle && detalle.campos) || [];
+  // ==========================================================
+  // PANEL DE DETALLE DE UNA CATEGORÍA (la "pestaña" abierta)
+  // ==========================================================
 
-    const camposExtraHTML = camposExtra.map((campo) => `
-      <div class="campo campo--${campo.type}">
-        <label class="campo-label">${campo.icon || ''} ${campo.label}</label>
-        ${_campoHTML(campo, entry[campo.id])}
+  function renderCategoriaDetalle(dateStr, catId) {
+    const entry = Storage.getEntry(dateStr) || {};
+    const { principal, extra, breathing } = camposDeCategoria(catId);
+    if (!principal) { renderRegistro(dateStr); return; }
+
+    const campoPrincipalHTML = `
+      <div class="campo campo--${principal.type}">
+        <label class="campo-label">${principal.label}</label>
+        ${_campoHTML(principal, entry[principal.id])}
+      </div>`;
+
+    const camposExtraHTML = extra.map((cat) => `
+      <div class="campo campo--${cat.type}">
+        <label class="campo-label">${cat.icon ? cat.icon + ' ' : ''}${cat.label}</label>
+        ${_campoHTML(cat, entry[cat.id])}
       </div>`).join('');
 
-    view().innerHTML = `
-      <section class="vista-registro">
-        <div class="registro-header">
-          <button class="btn-icon" data-action="volver-registro" aria-label="Volver">‹</button>
-          <div class="detalle-header" style="justify-content:center;">
-            <span class="tab-cat-icon">${cat.icon}</span>
-            <h1>${cat.label}</h1>
+    const breathingHTML = breathing ? `
+      <div class="grupo-registro">
+        <legend style="display:block;margin-bottom:12px;">🌬️ Respiración guiada</legend>
+        <div class="respiracion-box">
+          <div class="respiracion-circulo-wrap">
+            <div class="respiracion-circulo" id="resp-circulo"></div>
           </div>
-          <span style="width:36px"></span>
+          <div class="respiracion-texto" id="resp-texto">Presioná iniciar cuando quieras</div>
+          <div class="respiracion-contador" id="resp-contador"></div>
+          <div class="respiracion-controles">
+            <button type="button" class="btn btn--secondary" data-action="resp-iniciar" id="btn-resp-iniciar">▶️ Iniciar</button>
+            <button type="button" class="btn btn--secondary" data-action="resp-detener" id="btn-resp-detener" hidden>⏹️ Detener</button>
+          </div>
+          <p class="texto-pequeno text-muted" style="margin-top:10px;">Inhalá 4s · Sostené 4s · Exhalá 4s · Sostené 2s. Repetilo las veces que necesites.</p>
         </div>
-        <p class="text-muted" style="text-align:center;margin-top:-10px;">${formatFechaLarga(dateStr)}</p>
+      </div>` : '';
 
-        <form id="form-detalle-categoria" data-fecha="${dateStr}" data-categoria="${catId}">
+    view().innerHTML = `
+      <section class="vista-detalle-categoria">
+        <div class="detalle-header">
+          <button class="btn-icon" data-action="cerrar-categoria" aria-label="Volver">‹</button>
+          <span class="tab-cat-icon">${principal.icon}</span>
+          <div>
+            <h1>${principal.label}</h1>
+            <p class="text-muted">${formatFechaCorta(dateStr)}</p>
+          </div>
+        </div>
+
+        ${breathingHTML}
+
+        <form id="form-detalle-categoria" data-fecha="${dateStr}" data-cat="${catId}">
           <fieldset class="grupo-registro">
-            <legend>${cat.label}</legend>
-            <div class="campo campo--${cat.type}">
-              ${_campoHTML(cat, entry[cat.id])}
-            </div>
+            <legend>Registro</legend>
+            ${campoPrincipalHTML}
           </fieldset>
-
-          ${detalle && detalle.breathing ? _respiracionHTML() : ''}
 
           ${camposExtraHTML ? `
           <fieldset class="grupo-registro">
@@ -393,53 +441,32 @@ const UI = (() => {
             ${camposExtraHTML}
           </fieldset>` : ''}
 
-          <button type="submit" class="btn btn--primary btn--full">Guardar ${cat.label.toLowerCase()}</button>
+          <button type="submit" class="btn btn--primary btn--full">Guardar</button>
+          <button type="button" class="btn btn--secondary btn--full" data-action="cerrar-categoria">Volver sin guardar</button>
         </form>
       </section>`;
   }
 
-  /** Markup del ejercicio de respiración guiada (la lógica del temporizador vive en app.js). */
-  function _respiracionHTML() {
-    return `
-      <div class="grupo-registro respiracion-box" id="widget-respiracion">
-        <legend style="display:block;text-transform:uppercase;font-size:.78rem;letter-spacing:.5px;font-weight:700;margin-bottom:10px;">🫁 Ejercicio de respiración</legend>
-        <div class="respiracion-circulo-wrap">
-          <div class="respiracion-circulo" id="respiracion-circulo"></div>
-        </div>
-        <div class="respiracion-texto" id="respiracion-texto">Presioná comenzar cuando quieras</div>
-        <div class="respiracion-contador" id="respiracion-contador"></div>
-        <div class="respiracion-controles">
-          <button type="button" class="btn btn--secondary" data-action="respirar-iniciar">Comenzar</button>
-          <button type="button" class="btn btn--secondary" data-action="respirar-detener">Detener</button>
-        </div>
-      </div>`;
-  }
-
+  /** Lee un formulario de detalle de categoría (campo principal + extras). */
   function leerFormDetalle(form, catId) {
-    const cat = REFUGIO_DATA.CATEGORIES.find((c) => c.id === catId);
-    const detalle = REFUGIO_DATA.DETAILS[catId];
-    const camposExtra = (detalle && detalle.campos) || [];
+    const { principal, extra } = camposDeCategoria(catId);
+    const campos = [principal].concat(extra).filter(Boolean);
     const fd = new FormData(form);
     const data = {};
 
-    [cat, ...camposExtra].forEach((campo) => {
-      if (campo.type === 'multi') {
-        data[campo.id] = fd.getAll(campo.id);
-      } else if (campo.type === 'bool') {
-        const v = fd.get(campo.id);
-        data[campo.id] = v === null ? undefined : v === '1';
+    campos.forEach((cat) => {
+      if (cat.type === 'multi') {
+        data[cat.id] = fd.getAll(cat.id);
+      } else if (cat.type === 'bool') {
+        const v = fd.get(cat.id);
+        data[cat.id] = v === null ? undefined : v === '1';
       } else {
-        const v = fd.get(campo.id);
-        data[campo.id] = v === '' || v === null ? undefined : v;
+        const v = fd.get(cat.id);
+        data[cat.id] = v === '' || v === null ? undefined : v;
       }
     });
 
     return data;
-  }
-
-  function leerFormChecklist(form) {
-    const fd = new FormData(form);
-    return { checklist: fd.getAll('checklist') };
   }
 
   // ==========================================================
@@ -491,7 +518,7 @@ const UI = (() => {
     const primerDia = new Date(year, month, 1);
     const ultimoDia = new Date(year, month + 1, 0);
     const nombreMes = primerDia.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-    const scaleColors = ['#D98A98', '#E8B4B4', '#E6D6B8', '#C7D9B7', '#8FA98C'];
+    const scaleColors = ['#B81C74', '#E4308F', '#F2C94C', '#9BD97B', '#4F9E2E'];
 
     let celdas = '';
     const offset = (primerDia.getDay() + 6) % 7;
@@ -627,7 +654,7 @@ const UI = (() => {
   return {
     esc, todayISO, formatFechaLarga, formatFechaCorta, toast, greeting,
     renderOnboarding, renderPerfil, renderDashboard,
-    renderRegistro, renderCategoriaDetalle, leerFormDetalle, leerFormChecklist,
+    renderRegistro, renderCategoriaDetalle, leerFormDetalle, camposDeCategoria,
     renderTimeline, renderCalendario, renderEstadisticas
   };
 })();
