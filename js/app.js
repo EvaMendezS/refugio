@@ -17,6 +17,7 @@ const App = (() => {
   // Estado efímero de navegación (no se persiste, vive solo en memoria).
   const state = {
     fechaRegistro: UI.todayISO(),
+    categoriaActiva: null,
     calAnio: new Date().getFullYear(),
     calMes: new Date().getMonth(),
     statCategoria: 'estado_animo',
@@ -24,6 +25,58 @@ const App = (() => {
   };
 
   const ROUTES = ['dashboard', 'registro', 'timeline', 'calendario', 'estadisticas', 'perfil'];
+
+  // ------------------------------------------------------------
+  // EJERCICIO DE RESPIRACIÓN GUIADA (temporizador por segundos)
+  // ------------------------------------------------------------
+  const FASES_RESPIRACION = [
+    { nombre: 'Inhalá', segundos: 4, clase: 'fase-inhalar' },
+    { nombre: 'Sostené', segundos: 4, clase: 'fase-sostener' },
+    { nombre: 'Exhalá', segundos: 4, clase: 'fase-exhalar' },
+    { nombre: 'Sostené', segundos: 4, clase: 'fase-sostener' }
+  ];
+  let respiracionIntervalId = null;
+  let respiracionFaseIdx = 0;
+  let respiracionSegundos = 0;
+
+  function iniciarRespiracion() {
+    detenerRespiracion();
+    respiracionFaseIdx = 0;
+    _aplicarFaseRespiracion();
+    respiracionIntervalId = setInterval(_tickRespiracion, 1000);
+  }
+
+  function _aplicarFaseRespiracion() {
+    const fase = FASES_RESPIRACION[respiracionFaseIdx];
+    respiracionSegundos = fase.segundos;
+    const circulo = document.getElementById('respiracion-circulo');
+    if (!circulo) { detenerRespiracion(); return; } // el widget ya no está en pantalla
+    circulo.className = `respiracion-circulo ${fase.clase}`;
+    document.getElementById('respiracion-texto').textContent = `${fase.nombre}…`;
+    document.getElementById('respiracion-contador').textContent = `${respiracionSegundos}s`;
+  }
+
+  function _tickRespiracion() {
+    const contador = document.getElementById('respiracion-contador');
+    if (!contador) { detenerRespiracion(); return; }
+    respiracionSegundos--;
+    if (respiracionSegundos <= 0) {
+      respiracionFaseIdx = (respiracionFaseIdx + 1) % FASES_RESPIRACION.length;
+      _aplicarFaseRespiracion();
+    } else {
+      contador.textContent = `${respiracionSegundos}s`;
+    }
+  }
+
+  function detenerRespiracion() {
+    if (respiracionIntervalId) { clearInterval(respiracionIntervalId); respiracionIntervalId = null; }
+    const circulo = document.getElementById('respiracion-circulo');
+    const texto = document.getElementById('respiracion-texto');
+    const contador = document.getElementById('respiracion-contador');
+    if (circulo) circulo.className = 'respiracion-circulo';
+    if (texto) texto.textContent = 'Presioná comenzar cuando quieras';
+    if (contador) contador.textContent = '';
+  }
 
   // ------------------------------------------------------------
   // ARRANQUE
@@ -64,8 +117,10 @@ const App = (() => {
   // ------------------------------------------------------------
 
   function onHashChange() {
+    detenerRespiracion();
     const ruta = (location.hash || '#dashboard').replace('#', '');
     const rutaValida = ROUTES.includes(ruta) ? ruta : 'dashboard';
+    if (rutaValida !== 'registro') state.categoriaActiva = null;
     marcarNavActiva(rutaValida);
     render(rutaValida);
   }
@@ -80,7 +135,13 @@ const App = (() => {
     const profile = Storage.getProfile();
     switch (ruta) {
       case 'dashboard': UI.renderDashboard(profile); break;
-      case 'registro': UI.renderRegistro(state.fechaRegistro); break;
+      case 'registro':
+        if (state.categoriaActiva) {
+          UI.renderCategoriaDetalle(state.fechaRegistro, state.categoriaActiva);
+        } else {
+          UI.renderRegistro(state.fechaRegistro);
+        }
+        break;
       case 'timeline': UI.renderTimeline(); break;
       case 'calendario': UI.renderCalendario(state.calAnio, state.calMes); break;
       case 'estadisticas': UI.renderEstadisticas(state.statCategoria); break;
@@ -119,6 +180,7 @@ const App = (() => {
 
       case 'ir-registro':
         state.fechaRegistro = UI.todayISO();
+        state.categoriaActiva = null;
         irA('registro');
         break;
 
@@ -135,7 +197,27 @@ const App = (() => {
 
       case 'ver-dia':
         state.fechaRegistro = el.dataset.fecha;
+        state.categoriaActiva = null;
         irA('registro');
+        break;
+
+      case 'abrir-categoria':
+        state.categoriaActiva = el.dataset.categoria;
+        UI.renderCategoriaDetalle(state.fechaRegistro, state.categoriaActiva);
+        break;
+
+      case 'volver-registro':
+        detenerRespiracion();
+        state.categoriaActiva = null;
+        UI.renderRegistro(state.fechaRegistro);
+        break;
+
+      case 'respirar-iniciar':
+        iniciarRespiracion();
+        break;
+
+      case 'respirar-detener':
+        detenerRespiracion();
         break;
 
       case 'borrar-registro':
@@ -201,13 +283,24 @@ const App = (() => {
       render('perfil');
     }
 
-    if (form.id === 'form-registro') {
+    if (form.id === 'form-detalle-categoria') {
       e.preventDefault();
       const fecha = form.dataset.fecha;
-      const data = UI.leerFormRegistro(form);
+      const categoria = form.dataset.categoria;
+      const data = UI.leerFormDetalle(form, categoria);
+      Storage.saveEntry(fecha, data);
+      detenerRespiracion();
+      UI.toast(REFUGIO_CONTENT.FEEDBACK.guardado);
+      state.categoriaActiva = null;
+      UI.renderRegistro(fecha);
+    }
+
+    if (form.id === 'form-checklist') {
+      e.preventDefault();
+      const fecha = form.dataset.fecha;
+      const data = UI.leerFormChecklist(form);
       Storage.saveEntry(fecha, data);
       UI.toast(REFUGIO_CONTENT.FEEDBACK.guardado);
-      irA('dashboard');
     }
   }
 

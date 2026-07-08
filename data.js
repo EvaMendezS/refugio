@@ -42,16 +42,19 @@ const REFUGIO_DATA = {
     CHECKLIST_TEMPLATE: 'refugio_checklist_template'
   },
 
-  /** Paleta de la app (se refleja también en styles.css como variables). */
+  /** Paleta de la app (se refleja también en styles.css como variables).
+   *  Versión "chic": tonos profundos y editoriales en vez de pastel puro. */
   PALETTE: {
-    rosa: '#F6D9DE',
-    rosaFuerte: '#E8A6B4',
-    salvia: '#B7C9B7',
-    salviaFuerte: '#8FA98C',
-    blanco: '#FFFFFF',
-    gris: '#F4F3F1',
-    grisTexto: '#6B6B6B',
-    texto: '#3A3A3A'
+    vino: '#8C4A5B',
+    vinoFuerte: '#6E3644',
+    salvia: '#4F5F4E',
+    salviaFuerte: '#3A4739',
+    crema: '#FAF7F2',
+    gris: '#F1EEE8',
+    grisBorde: '#E2DDD3',
+    grisTexto: '#7A756C',
+    texto: '#2A2724',
+    oro: '#B08D57'
   },
 
   /** Grupos en los que se organiza el registro diario. */
@@ -116,6 +119,108 @@ const REFUGIO_DATA = {
     { id: 'diario_libre', label: 'Diario libre', icon: '📓', group: 'reflexion', type: 'longtext', numeric: false }
   ],
 
+  /**
+   * DETAILS — campos ampliados por categoría, usados en la pestaña de
+   * detalle de cada categoría dentro del registro diario. Cada campo
+   * usa la misma estructura que una categoría (id, label, type, etc.)
+   * y se guarda directamente como una clave más del "entry" del día,
+   * por eso cada id debe ser único en toda la app.
+   * La propiedad "breathing: true" activa el ejercicio de respiración
+   * animado dentro de esa pestaña (ver ui.js -> renderCategoriaDetalle).
+   */
+  DETAILS: {
+    ansiedad: {
+      breathing: true,
+      campos: [
+        { id: 'ansiedad_sintomas', label: 'Síntomas físicos', icon: '⚡', type: 'multi',
+          options: ['Taquicardia', 'Falta de aire', 'Tensión muscular', 'Náuseas', 'Mareo', 'Sudoración', 'Temblor', 'Nudo en la garganta'] },
+        { id: 'ansiedad_desencadenante', label: '¿Qué lo disparó?', icon: '🎯', type: 'text' },
+        { id: 'ansiedad_pensamientos', label: 'Pensamientos que aparecieron', icon: '💭', type: 'longtext' },
+        { id: 'ansiedad_estrategia', label: '¿Qué usaste para regularte?', icon: '🧰', type: 'multi',
+          options: ['Respiración', 'Caminar', 'Hablar con alguien', 'Medicación', 'Distracción', 'Ninguna'] }
+      ]
+    },
+    panico: {
+      breathing: true,
+      campos: [
+        { id: 'panico_sintomas', label: 'Síntomas durante el episodio', icon: '⚡', type: 'multi',
+          options: ['Taquicardia', 'Falta de aire', 'Mareo', 'Sudoración', 'Temblor', 'Sensación de muerte inminente', 'Despersonalización'] },
+        { id: 'panico_duracion', label: 'Duración aproximada', icon: '⏱️', type: 'number', unit: 'minutos' },
+        { id: 'panico_lugar', label: '¿Dónde estabas?', icon: '📍', type: 'text' },
+        { id: 'panico_ayuda', label: '¿Recibiste ayuda de alguien?', icon: '🤲', type: 'bool' }
+      ]
+    },
+    migrana: {
+      campos: [
+        { id: 'migrana_ubicacion', label: 'Ubicación del dolor', icon: '📍', type: 'select',
+          options: ['Un lado', 'Ambos lados', 'Nuca', 'Frente', 'Detrás de los ojos'] },
+        { id: 'migrana_aura', label: '¿Hubo aura previa?', icon: '✨', type: 'bool' },
+        { id: 'migrana_duracion', label: 'Duración', icon: '⏱️', type: 'number', unit: 'horas' },
+        { id: 'migrana_desencadenante', label: 'Posible desencadenante', icon: '🎯', type: 'text' },
+        { id: 'migrana_medicacion', label: '¿Tomaste medicación?', icon: '💊', type: 'bool' }
+      ]
+    },
+    dolor: {
+      campos: [
+        { id: 'dolor_zona', label: 'Zona del cuerpo', icon: '📍', type: 'text' },
+        { id: 'dolor_tipo', label: 'Tipo de dolor', icon: '🩹', type: 'select',
+          options: ['Punzante', 'Sordo', 'Quemante', 'Opresivo', 'Pulsátil'] },
+        { id: 'dolor_duracion', label: 'Duración', icon: '⏱️', type: 'number', unit: 'horas' }
+      ]
+    },
+    sueno_calidad: {
+      campos: [
+        { id: 'sueno_despertares', label: 'Veces que te despertaste', icon: '🌙', type: 'number' },
+        { id: 'sueno_siesta', label: '¿Hiciste siesta?', icon: '😴', type: 'bool' },
+        { id: 'sueno_notas', label: 'Notas sobre el descanso', icon: '📝', type: 'longtext' }
+      ]
+    },
+    ciclo: {
+      campos: [
+        { id: 'ciclo_flujo', label: 'Flujo', icon: '🌸', type: 'select', options: ['Leve', 'Moderado', 'Abundante'] },
+        { id: 'ciclo_sintomas', label: 'Síntomas', icon: '⚡', type: 'multi',
+          options: ['Cólicos', 'Dolor de espalda', 'Hinchazón', 'Dolor de cabeza', 'Cambios de ánimo', 'Sensibilidad'] }
+      ]
+    },
+    medicacion: {
+      campos: [
+        { id: 'medicacion_detalle', label: '¿Qué medicación?', icon: '💊', type: 'text' },
+        { id: 'medicacion_efectos', label: 'Efectos notados', icon: '📝', type: 'longtext' }
+      ]
+    },
+    ejercicio: {
+      campos: [
+        { id: 'ejercicio_tipo', label: 'Tipo de actividad', icon: '🏃‍♀️', type: 'select',
+          options: ['Caminata', 'Cardio', 'Fuerza', 'Yoga', 'Otro'] },
+        { id: 'ejercicio_intensidad', label: 'Intensidad', icon: '🔥', type: 'scale',
+          scaleLabels: ['Muy suave', 'Suave', 'Moderada', 'Intensa', 'Muy intensa'] }
+      ]
+    },
+    estres: {
+      campos: [
+        { id: 'estres_fuente', label: '¿De dónde vino?', icon: '🎯', type: 'text' },
+        { id: 'estres_sintomas', label: 'Cómo se manifestó', icon: '⚡', type: 'multi',
+          options: ['Tensión muscular', 'Irritabilidad', 'Insomnio', 'Dificultad para concentrarse'] }
+      ]
+    },
+    energia: {
+      campos: [
+        { id: 'energia_momento', label: '¿En qué momento bajó más?', icon: '🕐', type: 'select',
+          options: ['Mañana', 'Tarde', 'Noche', 'Todo el día'] }
+      ]
+    },
+    alimentacion: {
+      campos: [
+        { id: 'alimentacion_comidas', label: 'Comidas realizadas', icon: '🍽️', type: 'number' },
+        { id: 'alimentacion_notas', label: 'Notas', icon: '📝', type: 'longtext' }
+      ]
+    },
+    concentracion: { campos: [{ id: 'concentracion_notas', label: 'Notas', icon: '📝', type: 'longtext' }] },
+    trabajo: { campos: [{ id: 'trabajo_notas', label: 'Notas', icon: '📝', type: 'longtext' }] },
+    relaciones: { campos: [{ id: 'relaciones_notas', label: 'Con quién / qué pasó', icon: '📝', type: 'longtext' }] },
+    estado_animo: { campos: [{ id: 'animo_detonante', label: '¿Qué influyó hoy?', icon: '🎯', type: 'text' }] }
+  },
+
   /** Ítems por defecto del checklist de autocuidado (editable por el usuario). */
   DEFAULT_CHECKLIST: [
     'Tomé mi medicación',
@@ -145,3 +250,4 @@ const REFUGIO_DATA = {
 // Congelamos el catálogo para evitar mutaciones accidentales desde otros módulos.
 Object.freeze(REFUGIO_DATA.CATEGORIES);
 Object.freeze(REFUGIO_DATA.GROUPS);
+Object.freeze(REFUGIO_DATA.DETAILS);

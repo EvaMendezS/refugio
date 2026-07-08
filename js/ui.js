@@ -305,16 +305,19 @@ const UI = (() => {
 
     const grupos = REFUGIO_DATA.GROUPS.map((grupo) => {
       const cats = REFUGIO_DATA.CATEGORIES.filter((c) => c.group === grupo.id);
-      const campos = cats.map((cat) => `
-        <div class="campo campo--${cat.type}">
-          <label class="campo-label">${cat.icon} ${cat.label}</label>
-          ${_campoHTML(cat, entry[cat.id])}
-        </div>`).join('');
+      const tabs = cats.map((cat) => {
+        const tieneValor = entry[cat.id] !== undefined && entry[cat.id] !== null && entry[cat.id] !== '' &&
+          !(Array.isArray(entry[cat.id]) && entry[cat.id].length === 0);
+        return `
+          <button type="button" class="tab-cat ${tieneValor ? 'tab-cat--completo' : ''}" data-action="abrir-categoria" data-categoria="${cat.id}">
+            ${tieneValor ? '<span class="tab-cat-check"></span>' : ''}
+            <span class="tab-cat-icon">${cat.icon}</span>
+            <span class="tab-cat-label">${cat.label}</span>
+          </button>`;
+      }).join('');
       return `
-        <fieldset class="grupo-registro">
-          <legend>${grupo.icon} ${grupo.label}</legend>
-          ${campos}
-        </fieldset>`;
+        <h2 class="registro-grupo-titulo">${grupo.icon} ${grupo.label}</h2>
+        <div class="tabs-grid">${tabs}</div>`;
     }).join('');
 
     const checklistHTML = settings.checklistTemplate.map((item) => `
@@ -334,38 +337,109 @@ const UI = (() => {
           <button class="btn-icon" data-action="cambiar-fecha" data-dir="1" aria-label="Día siguiente" ${dateStr >= todayISO() ? 'disabled' : ''}>›</button>
         </div>
 
-        <form id="form-registro" data-fecha="${dateStr}">
-          ${grupos}
+        <p class="text-muted">Tocá una categoría para abrir su registro completo. Las que ya tienen datos hoy quedan marcadas.</p>
 
+        ${grupos}
+
+        <form id="form-checklist" data-fecha="${dateStr}" class="checklist-panel">
+          <h3>✅ Checklist de autocuidado</h3>
+          <div class="checklist-grid">${checklistHTML}</div>
+          <button type="submit" class="btn btn--secondary btn--full">Guardar checklist</button>
+        </form>
+
+        ${entry.fecha ? `<button type="button" class="btn btn--danger btn--full" data-action="borrar-registro" data-fecha="${dateStr}">Borrar todo el registro de este día</button>` : ''}
+      </section>`;
+  }
+
+  /** Renderiza la pestaña de detalle de UNA categoría (campo principal + campos ampliados + respiración). */
+  function renderCategoriaDetalle(dateStr, catId) {
+    const cat = REFUGIO_DATA.CATEGORIES.find((c) => c.id === catId);
+    if (!cat) { renderRegistro(dateStr); return; }
+    const entry = Storage.getEntry(dateStr) || {};
+    const detalle = REFUGIO_DATA.DETAILS[catId];
+    const camposExtra = (detalle && detalle.campos) || [];
+
+    const camposExtraHTML = camposExtra.map((campo) => `
+      <div class="campo campo--${campo.type}">
+        <label class="campo-label">${campo.icon || ''} ${campo.label}</label>
+        ${_campoHTML(campo, entry[campo.id])}
+      </div>`).join('');
+
+    view().innerHTML = `
+      <section class="vista-registro">
+        <div class="registro-header">
+          <button class="btn-icon" data-action="volver-registro" aria-label="Volver">‹</button>
+          <div class="detalle-header" style="justify-content:center;">
+            <span class="tab-cat-icon">${cat.icon}</span>
+            <h1>${cat.label}</h1>
+          </div>
+          <span style="width:36px"></span>
+        </div>
+        <p class="text-muted" style="text-align:center;margin-top:-10px;">${formatFechaLarga(dateStr)}</p>
+
+        <form id="form-detalle-categoria" data-fecha="${dateStr}" data-categoria="${catId}">
           <fieldset class="grupo-registro">
-            <legend>✅ Checklist de autocuidado</legend>
-            <div class="checklist-grid">${checklistHTML}</div>
+            <legend>${cat.label}</legend>
+            <div class="campo campo--${cat.type}">
+              ${_campoHTML(cat, entry[cat.id])}
+            </div>
           </fieldset>
 
-          <button type="submit" class="btn btn--primary btn--full">Guardar registro</button>
-          ${entry.fecha ? `<button type="button" class="btn btn--danger btn--full" data-action="borrar-registro" data-fecha="${dateStr}">Borrar este registro</button>` : ''}
+          ${detalle && detalle.breathing ? _respiracionHTML() : ''}
+
+          ${camposExtraHTML ? `
+          <fieldset class="grupo-registro">
+            <legend>Detalle</legend>
+            ${camposExtraHTML}
+          </fieldset>` : ''}
+
+          <button type="submit" class="btn btn--primary btn--full">Guardar ${cat.label.toLowerCase()}</button>
         </form>
       </section>`;
   }
 
-  function leerFormRegistro(form) {
+  /** Markup del ejercicio de respiración guiada (la lógica del temporizador vive en app.js). */
+  function _respiracionHTML() {
+    return `
+      <div class="grupo-registro respiracion-box" id="widget-respiracion">
+        <legend style="display:block;text-transform:uppercase;font-size:.78rem;letter-spacing:.5px;font-weight:700;margin-bottom:10px;">🫁 Ejercicio de respiración</legend>
+        <div class="respiracion-circulo-wrap">
+          <div class="respiracion-circulo" id="respiracion-circulo"></div>
+        </div>
+        <div class="respiracion-texto" id="respiracion-texto">Presioná comenzar cuando quieras</div>
+        <div class="respiracion-contador" id="respiracion-contador"></div>
+        <div class="respiracion-controles">
+          <button type="button" class="btn btn--secondary" data-action="respirar-iniciar">Comenzar</button>
+          <button type="button" class="btn btn--secondary" data-action="respirar-detener">Detener</button>
+        </div>
+      </div>`;
+  }
+
+  function leerFormDetalle(form, catId) {
+    const cat = REFUGIO_DATA.CATEGORIES.find((c) => c.id === catId);
+    const detalle = REFUGIO_DATA.DETAILS[catId];
+    const camposExtra = (detalle && detalle.campos) || [];
     const fd = new FormData(form);
     const data = {};
 
-    REFUGIO_DATA.CATEGORIES.forEach((cat) => {
-      if (cat.type === 'multi') {
-        data[cat.id] = fd.getAll(cat.id);
-      } else if (cat.type === 'bool') {
-        const v = fd.get(cat.id);
-        data[cat.id] = v === null ? undefined : v === '1';
+    [cat, ...camposExtra].forEach((campo) => {
+      if (campo.type === 'multi') {
+        data[campo.id] = fd.getAll(campo.id);
+      } else if (campo.type === 'bool') {
+        const v = fd.get(campo.id);
+        data[campo.id] = v === null ? undefined : v === '1';
       } else {
-        const v = fd.get(cat.id);
-        data[cat.id] = v === '' || v === null ? undefined : v;
+        const v = fd.get(campo.id);
+        data[campo.id] = v === '' || v === null ? undefined : v;
       }
     });
 
-    data.checklist = fd.getAll('checklist');
     return data;
+  }
+
+  function leerFormChecklist(form) {
+    const fd = new FormData(form);
+    return { checklist: fd.getAll('checklist') };
   }
 
   // ==========================================================
@@ -553,7 +627,7 @@ const UI = (() => {
   return {
     esc, todayISO, formatFechaLarga, formatFechaCorta, toast, greeting,
     renderOnboarding, renderPerfil, renderDashboard,
-    renderRegistro, leerFormRegistro,
+    renderRegistro, renderCategoriaDetalle, leerFormDetalle, leerFormChecklist,
     renderTimeline, renderCalendario, renderEstadisticas
   };
 })();

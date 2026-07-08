@@ -43,20 +43,28 @@ const PDFExport = (() => {
         </tr>`).join('')
       : `<tr><td colspan="4">Aún no hay suficientes datos en común para calcular correlaciones.</td></tr>`;
 
+    // Construye un mapa id -> definición de campo, incluyendo tanto las
+    // categorías principales como los campos ampliados de cada pestaña,
+    // para poder listar TODO lo registrado ese día en el informe.
+    const todosLosCampos = REFUGIO_DATA.CATEGORIES.slice();
+    Object.keys(REFUGIO_DATA.DETAILS).forEach((catId) => {
+      const detalle = REFUGIO_DATA.DETAILS[catId];
+      (detalle.campos || []).forEach((campo) => todosLosCampos.push(campo));
+    });
+
     const filasEntradas = entries
       .filter(e => e.fecha >= desde && e.fecha <= hasta)
       .map((e) => {
-        const campos = REFUGIO_DATA.CATEGORIES
+        const campos = todosLosCampos
           .filter((c) => e[c.id] !== undefined && e[c.id] !== null && e[c.id] !== '' &&
-            c.type !== 'longtext')
-          .map((c) => `<strong>${c.icon} ${c.label}:</strong> ${Array.isArray(e[c.id]) ? e[c.id].join(', ') : e[c.id]}`)
+            c.type !== 'longtext' &&
+            !(Array.isArray(e[c.id]) && e[c.id].length === 0))
+          .map((c) => `<strong>${c.icon || ''} ${c.label}:</strong> ${Array.isArray(e[c.id]) ? e[c.id].join(', ') : (e[c.id] === true ? 'Sí' : e[c.id] === false ? 'No' : e[c.id])}`)
           .join(' &nbsp;•&nbsp; ');
-        const libre = ['gratitud', 'diario_libre']
-          .filter((id) => e[id])
-          .map((id) => {
-            const cat = REFUGIO_DATA.CATEGORIES.find(c => c.id === id);
-            return `<p class="rep-libre"><em>${cat.label}:</em> ${e[id]}</p>`;
-          }).join('');
+        const camposLibres = todosLosCampos.filter((c) => c.type === 'longtext' && e[c.id]);
+        const libre = camposLibres
+          .map((c) => `<p class="rep-libre"><em>${c.label}:</em> ${e[c.id]}</p>`)
+          .join('');
         return `
           <div class="rep-dia">
             <h4>${e.fecha}</h4>
@@ -72,16 +80,16 @@ const PDFExport = (() => {
 <meta charset="UTF-8">
 <title>Informe Refugio — ${nombre}</title>
 <style>
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #3A3A3A; padding: 32px; max-width: 800px; margin: auto; }
-  h1 { color: #C97C8D; margin-bottom: 4px; }
-  h2 { color: #6B8F6B; border-bottom: 2px solid #F6D9DE; padding-bottom: 4px; margin-top: 32px; }
-  .subt { color: #6B6B6B; margin-top: 0; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #2A2724; padding: 32px; max-width: 800px; margin: auto; }
+  h1 { font-family: Georgia, serif; color: #6E3644; margin-bottom: 4px; }
+  h2 { font-family: Georgia, serif; color: #3A4739; border-bottom: 2px solid #E2DDD3; padding-bottom: 4px; margin-top: 32px; }
+  .subt { color: #7A756C; margin-top: 0; }
   table { width: 100%; border-collapse: collapse; margin-top: 12px; }
   th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; font-size: 13px; }
-  th { color: #6B6B6B; font-weight: 600; }
-  .disclaimer { background: #F4F3F1; border-left: 4px solid #B7C9B7; padding: 12px 16px; font-size: 12px; margin-top: 24px; border-radius: 6px; }
+  th { color: #7A756C; font-weight: 600; }
+  .disclaimer { background: #F1EEE8; border-left: 4px solid #B08D57; padding: 12px 16px; font-size: 12px; margin-top: 24px; border-radius: 6px; }
   .rep-dia { border-bottom: 1px solid #eee; padding: 10px 0; font-size: 13px; }
-  .rep-dia h4 { margin: 0 0 4px 0; color: #C97C8D; }
+  .rep-dia h4 { margin: 0 0 4px 0; color: #6E3644; }
   .rep-libre { margin: 4px 0; font-style: italic; color: #555; }
   @media print { body { padding: 0; } }
 </style>
