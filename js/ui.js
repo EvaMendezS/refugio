@@ -199,12 +199,38 @@ const UI = (() => {
   // DASHBOARD
   // ==========================================================
 
+  /** Porcentaje de categorías con al menos un dato cargado en el entry del día. */
+  function _porcentajeCompletado(entry) {
+    if (!entry) return 0;
+    const total = REFUGIO_DATA.CATEGORIES.length;
+    const llenas = REFUGIO_DATA.CATEGORIES.filter((c) => {
+      const v = entry[c.id];
+      if (Array.isArray(v)) return v.length > 0;
+      return v !== undefined && v !== null && v !== '';
+    }).length;
+    return Math.round((llenas / total) * 100);
+  }
+
+  /** Genera el SVG del anillo de progreso (sin librerías, solo stroke-dasharray). */
+  function _anilloProgresoSVG(pct) {
+    const r = 26, c = 2 * Math.PI * r;
+    const offset = c - (pct / 100) * c;
+    return `
+      <svg class="progreso-anillo" width="64" height="64" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--gris-borde)" stroke-width="7"></circle>
+        <circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--rosa)" stroke-width="7"
+          stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${offset}"
+          transform="rotate(-90 32 32)"></circle>
+      </svg>`;
+  }
+
   function renderDashboard(profile) {
     const entries = Storage.getEntriesSorted();
     const hoy = todayISO();
     const registroHoy = Storage.getEntry(hoy);
     const racha = Analytics.currentStreak(entries);
     const frase = REFUGIO_CONTENT.FRASES_DASHBOARD[Math.floor(Math.random() * REFUGIO_CONTENT.FRASES_DASHBOARD.length)];
+    const pctHoy = _porcentajeCompletado(registroHoy);
 
     const desde = new Date();
     desde.setDate(desde.getDate() - 13);
@@ -221,13 +247,16 @@ const UI = (() => {
         </div>
 
         <div class="dash-cards">
+          <div class="card card--anillo">
+            ${_anilloProgresoSVG(pctHoy)}
+            <div>
+              <span class="card-label">Hoy completaste</span>
+              <div class="progreso-anillo-texto">${pctHoy}%</div>
+            </div>
+          </div>
           <div class="card card--accent-rosa">
             <span class="card-label">Racha de registros</span>
             <span class="card-value">${racha} ${racha === 1 ? 'día' : 'días'}</span>
-          </div>
-          <div class="card card--accent-salvia">
-            <span class="card-label">Registro de hoy</span>
-            <span class="card-value">${registroHoy ? '✓ Completo' : 'Pendiente'}</span>
           </div>
         </div>
 
@@ -341,7 +370,7 @@ const UI = (() => {
         return `
           <button type="button" class="tab-cat ${completo ? 'tab-cat--completo' : ''}" data-action="abrir-categoria" data-cat="${cat.id}">
             ${completo ? '<span class="tab-cat-check"></span>' : ''}
-            <span class="tab-cat-icon">${cat.icon}</span>
+            <span class="tab-cat-icon-badge">${cat.icon}</span>
             <span class="tab-cat-label">${cat.label}</span>
           </button>`;
       }).join('');
@@ -420,7 +449,7 @@ const UI = (() => {
       <section class="vista-detalle-categoria">
         <div class="detalle-header">
           <button class="btn-icon" data-action="cerrar-categoria" aria-label="Volver">‹</button>
-          <span class="tab-cat-icon">${principal.icon}</span>
+          <span class="tab-cat-icon-badge">${principal.icon}</span>
           <div>
             <h1>${principal.label}</h1>
             <p class="text-muted">${formatFechaCorta(dateStr)}</p>
