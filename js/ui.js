@@ -354,8 +354,25 @@ const UI = (() => {
     });
   }
 
+  /** Texto corto que resume el valor principal cargado hoy, para la lista. */
+  function _previewCategoria(entry, cat) {
+    if (!entry) return 'Sin registrar todavía';
+    const v = entry[cat.id];
+    if (v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)) {
+      return 'Sin registrar todavía';
+    }
+    switch (cat.type) {
+      case 'scale': return cat.scaleLabels ? cat.scaleLabels[Number(v)] : v;
+      case 'bool': return v === true || v === '1' ? 'Sí' : 'No';
+      case 'multi': return v.join(', ');
+      case 'number': return `${v}${cat.unit ? ' ' + cat.unit : ''}`;
+      case 'longtext': return String(v).slice(0, 48) + (String(v).length > 48 ? '…' : '');
+      default: return String(v);
+    }
+  }
+
   // ==========================================================
-  // REGISTRO DIARIO — GRILLA DE PESTAÑAS
+  // REGISTRO DIARIO — LISTA VERTICAL DE CATEGORÍAS
   // ==========================================================
 
   function renderRegistro(dateStr) {
@@ -365,18 +382,22 @@ const UI = (() => {
 
     const grupos = REFUGIO_DATA.GROUPS.map((grupo) => {
       const cats = REFUGIO_DATA.CATEGORIES.filter((c) => c.group === grupo.id);
-      const tabs = cats.map((cat) => {
+      const filas = cats.map((cat) => {
         const completo = _categoriaCompleta(entry, cat.id);
         return `
-          <button type="button" class="tab-cat ${completo ? 'tab-cat--completo' : ''}" data-action="abrir-categoria" data-cat="${cat.id}">
-            ${completo ? '<span class="tab-cat-check"></span>' : ''}
-            <span class="tab-cat-icon-badge">${cat.icon}</span>
-            <span class="tab-cat-label">${cat.label}</span>
+          <button type="button" class="cat-row ${completo ? 'cat-row--completo' : ''}" data-action="abrir-categoria" data-cat="${cat.id}">
+            ${completo ? '<span class="cat-row-check"></span>' : ''}
+            <span class="cat-row-icon">${cat.icon}</span>
+            <span class="cat-row-texto">
+              <span class="cat-row-label">${cat.label}</span>
+              <span class="cat-row-preview">${esc(_previewCategoria(entry, cat))}</span>
+            </span>
+            <span class="cat-row-arrow">›</span>
           </button>`;
       }).join('');
       return `
         <h2 class="registro-grupo-titulo">${grupo.icon} ${grupo.label}</h2>
-        <div class="tabs-grid">${tabs}</div>`;
+        <div class="cat-list">${filas}</div>`;
     }).join('');
 
     const checklistHTML = settings.checklistTemplate.map((item) => `
@@ -449,7 +470,7 @@ const UI = (() => {
       <section class="vista-detalle-categoria">
         <div class="detalle-header">
           <button class="btn-icon" data-action="cerrar-categoria" aria-label="Volver">‹</button>
-          <span class="tab-cat-icon-badge">${principal.icon}</span>
+          <span class="cat-row-icon">${principal.icon}</span>
           <div>
             <h1>${principal.label}</h1>
             <p class="text-muted">${formatFechaCorta(dateStr)}</p>
@@ -547,7 +568,7 @@ const UI = (() => {
     const primerDia = new Date(year, month, 1);
     const ultimoDia = new Date(year, month + 1, 0);
     const nombreMes = primerDia.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-    const scaleColors = ['#B81C74', '#E4308F', '#F2C94C', '#9BD97B', '#4F9E2E'];
+    const scaleColors = ['#C71585', '#FF2E93', '#F5C94E', '#C3D97E', '#748E2C'];
 
     let celdas = '';
     const offset = (primerDia.getDay() + 6) % 7;

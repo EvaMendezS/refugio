@@ -17,7 +17,7 @@
 
 'use strict';
 
-const CACHE_NAME = 'refugio-cache-v3';
+const CACHE_NAME = 'refugio-cache-v5';
 
 // Rutas relativas: funcionan tanto en la raíz como en un subpath de
 // GitHub Pages (ej: usuario.github.io/refugio/).
@@ -34,7 +34,10 @@ const APP_SHELL = [
   './js/pdf.js',
   './manifest.json',
   './assets/icon-192.png',
-  './assets/icon-512.png'
+  './assets/icon-512.png',
+  './assets/icon-180.png',
+  './assets/icon-192-maskable.png',
+  './assets/icon-512-maskable.png'
 ];
 
 self.addEventListener('install', (event) => {
