@@ -80,16 +80,16 @@ const PDFExport = (() => {
 <meta charset="UTF-8">
 <title>Informe Refugio — ${nombre}</title>
 <style>
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #221F1D; padding: 32px; max-width: 800px; margin: auto; }
-  h1 { color: #B81C74; margin-bottom: 4px; }
-  h2 { color: #4F9E2E; border-bottom: 2px solid #E4E0DA; padding-bottom: 4px; margin-top: 32px; }
-  .subt { color: #726C66; margin-top: 0; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #17171A; padding: 32px; max-width: 800px; margin: auto; }
+  h1 { color: #17171A; margin-bottom: 4px; }
+  h2 { color: #5F7A2C; border-bottom: 2px solid #E4E2DD; padding-bottom: 4px; margin-top: 32px; }
+  .subt { color: #6B6B72; margin-top: 0; }
   table { width: 100%; border-collapse: collapse; margin-top: 12px; }
   th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; font-size: 13px; }
-  th { color: #726C66; font-weight: 600; }
-  .disclaimer { background: #F4F2F0; border-left: 4px solid #4F9E2E; padding: 12px 16px; font-size: 12px; margin-top: 24px; border-radius: 6px; }
+  th { color: #6B6B72; font-weight: 600; }
+  .disclaimer { background: #F2F1EE; border-left: 4px solid #6B6B72; padding: 12px 16px; font-size: 12px; margin-top: 24px; border-radius: 6px; }
   .rep-dia { border-bottom: 1px solid #eee; padding: 10px 0; font-size: 13px; }
-  .rep-dia h4 { margin: 0 0 4px 0; color: #B81C74; }
+  .rep-dia h4 { margin: 0 0 4px 0; color: #5F7A2C; }
   .rep-libre { margin: 4px 0; font-style: italic; color: #555; }
   @media print { body { padding: 0; } }
 </style>

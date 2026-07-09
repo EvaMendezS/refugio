@@ -17,7 +17,7 @@
 
 'use strict';
 
-const CACHE_NAME = 'refugio-cache-v5';
+const CACHE_NAME = 'refugio-cache-v7';
 
 // Rutas relativas: funcionan tanto en la raíz como en un subpath de
 // GitHub Pages (ej: usuario.github.io/refugio/).

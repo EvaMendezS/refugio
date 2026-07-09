@@ -568,7 +568,7 @@ const UI = (() => {
     const primerDia = new Date(year, month, 1);
     const ultimoDia = new Date(year, month + 1, 0);
     const nombreMes = primerDia.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-    const scaleColors = ['#C71585', '#FF2E93', '#F5C94E', '#C3D97E', '#748E2C'];
+    const scaleColors = ['#E4E2DD', '#D3DEB4', '#B9CC85', '#9CB856', '#7C9A3F'];
 
     let celdas = '';
     const offset = (primerDia.getDay() + 6) % 7;

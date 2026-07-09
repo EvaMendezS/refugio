@@ -152,7 +152,7 @@ const Analytics = (() => {
     if (!canvas || !puntos.length) return;
     const { ctx, w, h } = _prepCanvas(canvas);
     const pad = 28;
-    const color = opciones.color || getComputedStyle(document.body).getPropertyValue('--verde-fuerte').trim() || '#4F9E2E';
+    const color = opciones.color || getComputedStyle(document.body).getPropertyValue('--ok-fuerte').trim() || '#0B7A54';
     const min = opciones.min !== undefined ? opciones.min : Math.min(...puntos.map(p => p.valor));
     const max = opciones.max !== undefined ? opciones.max : Math.max(...puntos.map(p => p.valor));
     const rango = (max - min) || 1;
@@ -196,7 +196,7 @@ const Analytics = (() => {
     if (!canvas || !items.length) return;
     const { ctx, w, h } = _prepCanvas(canvas);
     const pad = 24;
-    const color = opciones.color || getComputedStyle(document.body).getPropertyValue('--rosa-fuerte').trim() || '#B81C74';
+    const color = opciones.color || getComputedStyle(document.body).getPropertyValue('--acento-fuerte').trim() || '#5F7A2C';
     const max = opciones.max !== undefined ? opciones.max : Math.max(...items.map(i => i.valor), 1);
     const anchoBarra = (w - pad * 2) / items.length * 0.6;
     const espacio = (w - pad * 2) / items.length;

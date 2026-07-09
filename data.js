@@ -43,18 +43,19 @@ const REFUGIO_DATA = {
   },
 
   /** Paleta de la app (se refleja también en styles.css como variables).
-   *  Estilo "matcha barbie": minimalista sobre crema, con verde matcha
-   *  y rosa Barbie como acentos vibrantes (no pastel apagado). */
+   *  Estilo minimalista y neutro: base grafito/hueso, un único acento
+   *  sobrio (verde matcha) para interacción, y un verde esmeralda
+   *  apagado reservado solo para estados de "completo". */
   PALETTE: {
-    rosa: '#FF2E93',
-    rosaFuerte: '#C71585',
-    verde: '#A9C23F',
-    verdeFuerte: '#748E2C',
-    crema: '#FBF9F3',
-    gris: '#F3F0E6',
-    grisBorde: '#E9E3D3',
-    grisTexto: '#8A8478',
-    texto: '#18160F'
+    rosa: '#7C9A3F',
+    rosaFuerte: '#5F7A2C',
+    verde: '#0F9D6D',
+    verdeFuerte: '#0B7A54',
+    crema: '#FAFAF8',
+    gris: '#F2F1EE',
+    grisBorde: '#E4E2DD',
+    grisTexto: '#6B6B72',
+    texto: '#17171A'
   },
 
   /** Grupos en los que se organiza el registro diario. */
